@@ -25,6 +25,8 @@ import cv2
 import numpy as np
 import requests
 import torch
+import os
+import shutil
 from packaging.version import Version
 from rich.progress import track
 
@@ -171,6 +173,21 @@ def run_colmap(
     ):
         run_command(mapper_cmd, verbose=verbose)
     CONSOLE.log("[bold green]:tada: Done COLMAP bundle adjustment.")
+
+    # Move largest sparse directory into f"{sparse_dir}/0"
+    dir_with_most_images = "0"
+    largest_bin_file_size = 0
+    for directory in os.listdir(sparse_dir):
+        directory_path = os.path.join(sparse_dir, directory)
+        directory_bin_size = os.path.getsize(os.path.join(directory_path, "images.bin"))
+        if directory_bin_size > largest_bin_file_size:
+            largest_bin_file_size = directory_bin_size
+            dir_with_most_images = directory
+
+    if dir_with_most_images != "0":
+        curr_directory = os.path.join(sparse_dir, dir_with_most_images)
+        for sparse_file in os.listdir(curr_directory):
+            shutil.copy(os.path.join(curr_directory, sparse_file), os.path.join(sparse_dir, "0"))
 
     if refine_intrinsics:
         with status(msg="[bold yellow]Refine intrinsics...", spinner="dqpb", verbose=verbose):
